@@ -122,11 +122,12 @@ add_apt_repo_with_fallback() {
 }
 
 # Function to add helm repo with fallback
-# Usage: add_helm_repo_with_fallback REPO_NAME REPO_URL [FALLBACK_URL]
+# Usage: add_helm_repo_with_fallback REPO_NAME REPO_URL [FALLBACK_REPO_NAME] [FALLBACK_URL]
 add_helm_repo_with_fallback() {
     local repo_name="$1"
     local repo_url="$2"
-    local fallback_url="$3"
+    local fallback_repo_name="$3"
+    local fallback_url="$4"
     local success=false
     local timeout=30
 
@@ -142,9 +143,9 @@ add_helm_repo_with_fallback() {
         # Try fallback if provided
         if [ -n "$fallback_url" ]; then
             echo "Trying fallback URL: $fallback_url"
-            if timeout $timeout helm repo add "$repo_name" "$fallback_url" > /dev/null 2>&1; then
+            if timeout $timeout helm repo add "$fallback_repo_name" "$fallback_url" > /dev/null 2>&1; then
                 success=true
-                echo "✅ Helm repository $repo_name added successfully from fallback"
+                echo "✅ Helm repository $fallback_repo_name added successfully from fallback"
             else
                 echo "❌ Failed to add Helm repository from fallback URL"
             fi

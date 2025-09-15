@@ -67,15 +67,17 @@ if [ "$GPU_AVAILABLE" = true ]; then
     if [ "$USE_CHINA_MIRRORS" = true ] && command -v add_helm_repo_with_fallback >/dev/null 2>&1; then
         # Use our helper function with fallbacks if in China
         echo "Using China mirrors for NVIDIA Helm repo..."
-        add_helm_repo_with_fallback "nvidia" "$NVIDIA_REPO_MIRROR" "$NVIDIA_REPO_URL"
+        add_helm_repo_with_fallback "nvidia-mirror" "$NVIDIA_REPO_MIRROR" "nvidia" "$NVIDIA_REPO_URL"
+        HELM_REPO_NAME="nvidia-mirror"
     else
         # Default behavior
         echo "Using official NVIDIA Helm repo..."
         helm repo add nvidia "$NVIDIA_REPO_URL" && helm repo update
+        HELM_REPO_NAME="nvidia"
     fi
     
     echo "Installing GPU Operator version $NVIDIA_VERSION..."
-    helm install --wait gpu-operator -n gpu-operator --create-namespace nvidia/gpu-operator --version="$NVIDIA_VERSION" --timeout 15m
+    helm install --wait gpu-operator -n gpu-operator --create-namespace ${HELM_REPO_NAME}/gpu-operator --version="$NVIDIA_VERSION" --timeout 15m
 fi
 
 echo "NVIDIA GPU Setup complete."
