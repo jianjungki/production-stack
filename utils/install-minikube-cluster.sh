@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+# Source the China mirrors helper script if it exists
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/china-mirrors.sh" ]; then
+    source "$SCRIPT_DIR/china-mirrors.sh"
+fi
+
 # Allow users to override the paths for the NVIDIA tools.
 : "${NVIDIA_SMI_PATH:=nvidia-smi}"
 : "${NVIDIA_CTK_PATH:=nvidia-ctk}"
@@ -15,20 +21,35 @@ minikube_exists() {
   command -v minikube >/dev/null 2>&1
 }
 
-# Get the script directory to reference local scripts reliably.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 # --- Install Prerequisites ---
 echo "Installing kubectl and helm..."
 bash "$SCRIPT_DIR/install-kubectl.sh"
 bash "$SCRIPT_DIR/install-helm.sh"
 
-# Install minikube if it isn’t already installed.
+# Install minikube if it isn't already installed.
 if minikube_exists; then
   echo "Minikube already installed."
 else
   echo "Minikube not found. Installing minikube..."
-  curl -LO https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
+  
+  # Define URLs - original and mirrors
+  MINIKUBE_URL="https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64"
+  MINIKUBE_MIRROR1="${GITHUB_MIRROR}https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64"
+  MINIKUBE_MIRROR2="https://mirror.ghproxy.com/https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64"
+  
+  if [ "$USE_CHINA_MIRRORS" = true ] && command -v download_with_fallback >/dev/null 2>&1; then
+    # Use our helper function with fallbacks if in China
+    echo "Using China mirrors for minikube download..."
+    download_with_fallback "$MINIKUBE_MIRROR1" "minikube-linux-amd64" "$MINIKUBE_MIRROR2" "$MINIKUBE_URL"
+  else
+    # Default behavior
+    echo "Using official minikube download site..."
+    curl -LO "$MINIKUBE_URL" || {
+      echo "Failed to download minikube"
+      exit 1
+    }
+  fi
+  
   sudo install minikube-linux-amd64 /usr/local/bin/minikube && rm minikube-linux-amd64
 fi
 
@@ -120,9 +141,24 @@ if [ "$GPU_AVAILABLE" = true ]; then
 
     # Install the GPU Operator via Helm.
     echo "Adding NVIDIA helm repo and updating..."
-    helm repo add nvidia https://helm.ngc.nvidia.com/nvidia && helm repo update
-    echo "Installing GPU Operator..."
-    helm install --wait --generate-name -n gpu-operator --create-namespace nvidia/gpu-operator --version=v24.9.1
+    
+    # Define NVIDIA Helm repo URLs
+    NVIDIA_REPO_URL="https://helm.ngc.nvidia.com/nvidia"
+    NVIDIA_REPO_MIRROR="$NVIDIA_MIRROR"
+    NVIDIA_VERSION="v24.9.1"
+    
+    if [ "$USE_CHINA_MIRRORS" = true ] && command -v add_helm_repo_with_fallback >/dev/null 2>&1; then
+        # Use our helper function with fallbacks if in China
+        echo "Using China mirrors for NVIDIA Helm repo..."
+        add_helm_repo_with_fallback "nvidia" "$NVIDIA_REPO_MIRROR" "$NVIDIA_REPO_URL"
+    else
+        # Default behavior
+        echo "Using official NVIDIA Helm repo..."
+        helm repo add nvidia "$NVIDIA_REPO_URL" && helm repo update
+    fi
+    
+    echo "Installing GPU Operator version $NVIDIA_VERSION..."
+    helm install --wait --generate-name -n gpu-operator --create-namespace nvidia/gpu-operator --version="$NVIDIA_VERSION"
 else
     # No GPU: Start minikube without GPU support.
     echo "Starting minikube without GPU support..."

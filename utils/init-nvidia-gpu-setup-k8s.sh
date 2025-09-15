@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+# Source the China mirrors helper script if it exists
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/china-mirrors.sh" ]; then
+    source "$SCRIPT_DIR/china-mirrors.sh"
+fi
+
 # Allow users to override the paths for the NVIDIA tools.
 : "${NVIDIA_SMI_PATH:=nvidia-smi}"
 : "${NVIDIA_CTK_PATH:=nvidia-ctk}"
@@ -8,9 +14,6 @@ set -e
 # --- Debug and Environment Setup ---
 echo "Current PATH: $PATH"
 echo "Operating System: $(uname -a)"
-
-# Get the script directory to reference local scripts reliably.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # --- Install Prerequisites ---
 echo "Installing kubectl and helm..."
@@ -55,9 +58,24 @@ if [ "$GPU_AVAILABLE" = true ]; then
 
     # Install the GPU Operator via Helm.
     echo "Adding NVIDIA helm repo and updating..."
-    helm repo add nvidia https://helm.ngc.nvidia.com/nvidia && helm repo update
-    echo "Installing GPU Operator..."
-    helm install --wait gpu-operator -n gpu-operator --create-namespace nvidia/gpu-operator --version=v24.9.1
+    
+    # Define NVIDIA Helm repo URLs
+    NVIDIA_REPO_URL="https://helm.ngc.nvidia.com/nvidia"
+    NVIDIA_REPO_MIRROR="$NVIDIA_MIRROR"
+    NVIDIA_VERSION="v24.9.1"
+    
+    if [ "$USE_CHINA_MIRRORS" = true ] && command -v add_helm_repo_with_fallback >/dev/null 2>&1; then
+        # Use our helper function with fallbacks if in China
+        echo "Using China mirrors for NVIDIA Helm repo..."
+        add_helm_repo_with_fallback "nvidia" "$NVIDIA_REPO_MIRROR" "$NVIDIA_REPO_URL"
+    else
+        # Default behavior
+        echo "Using official NVIDIA Helm repo..."
+        helm repo add nvidia "$NVIDIA_REPO_URL" && helm repo update
+    fi
+    
+    echo "Installing GPU Operator version $NVIDIA_VERSION..."
+    helm install --wait gpu-operator -n gpu-operator --create-namespace nvidia/gpu-operator --version="$NVIDIA_VERSION"
 fi
 
 echo "NVIDIA GPU Setup complete."
