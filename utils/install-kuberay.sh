@@ -34,7 +34,7 @@ helm search repo kuberay --devel
 
 # Install both CRDs and KubeRay operator
 echo "Installing KubeRay operator version ${KUBERAY_VERSION}..."
-helm install kuberay-operator kuberay/kuberay-operator --version "$KUBERAY_VERSION"
+helm install kuberay-operator kuberay/kuberay-operator --version "$KUBERAY_VERSION" --timeout 15m
 
 # Check the KubeRay operator Pod
 echo "Checking KubeRay operator pod status..."

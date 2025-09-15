@@ -20,7 +20,7 @@ HELM_MIRROR="https://mirrors.huaweicloud.com/helm"
 DOCKER_MIRROR="https://registry.docker-cn.com"
 
 # NVIDIA mirrors
-NVIDIA_MIRROR="https://mirrors.tuna.tsinghua.edu.cn/nvidia-helm"
+NVIDIA_MIRROR="https://mrsimonemms.github.io/nvidia-helm-mirror"
 
 # --- Proxy Configuration ---
 # Uncomment and set these variables to use a proxy
@@ -155,6 +155,7 @@ add_helm_repo_with_fallback() {
         helm repo update > /dev/null 2>&1
         return 0
     else
+        echo "❌ Failed to add Helm repository from all sources. Please check your network connection and try again."
         return 1
     fi
 }

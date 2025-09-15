@@ -75,7 +75,7 @@ if [ "$GPU_AVAILABLE" = true ]; then
     fi
     
     echo "Installing GPU Operator version $NVIDIA_VERSION..."
-    helm install --wait gpu-operator -n gpu-operator --create-namespace nvidia/gpu-operator --version="$NVIDIA_VERSION"
+    helm install --wait gpu-operator -n gpu-operator --create-namespace nvidia/gpu-operator --version="$NVIDIA_VERSION" --timeout 15m
 fi
 
 echo "NVIDIA GPU Setup complete."
