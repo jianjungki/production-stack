@@ -133,7 +133,11 @@ if [ "$GPU_AVAILABLE" = true ]; then
 
     # Start minikube with GPU support.
     echo "Starting minikube with GPU support..."
-    minikube start --memory="${MINIKUBE_MEM}" --driver=docker --container-runtime=docker --gpus=all --force --addons=nvidia-device-plugin
+    MINIKUBE_START_CMD="minikube start --memory=\"${MINIKUBE_MEM}\" --driver=docker --container-runtime=docker --gpus=all --force --addons=nvidia-device-plugin"
+    if [ "$USE_CHINA_MIRRORS" = true ]; then
+        MINIKUBE_START_CMD="$MINIKUBE_START_CMD --image-mirror-country=cn --image-repository=registry.cn-hangzhou.aliyuncs.com/google_containers"
+    fi
+    eval $MINIKUBE_START_CMD
 
     # Update kubeconfig context.
     echo "Updating kubeconfig context..."
